@@ -1,0 +1,15 @@
+C:\jungmin_coding\GameServerStudy\Server\ServerCore\bin\Release\net6.0\ServerCore.exe
+C:\jungmin_coding\GameServerStudy\Server\ServerCore\bin\Release\net6.0\ServerCore.deps.json
+C:\jungmin_coding\GameServerStudy\Server\ServerCore\bin\Release\net6.0\ServerCore.runtimeconfig.json
+C:\jungmin_coding\GameServerStudy\Server\ServerCore\bin\Release\net6.0\ServerCore.dll
+C:\jungmin_coding\GameServerStudy\Server\ServerCore\bin\Release\net6.0\ServerCore.pdb
+C:\jungmin_coding\GameServerStudy\Server\ServerCore\obj\Release\net6.0\ServerCore.csproj.AssemblyReference.cache
+C:\jungmin_coding\GameServerStudy\Server\ServerCore\obj\Release\net6.0\ServerCore.GeneratedMSBuildEditorConfig.editorconfig
+C:\jungmin_coding\GameServerStudy\Server\ServerCore\obj\Release\net6.0\ServerCore.AssemblyInfoInputs.cache
+C:\jungmin_coding\GameServerStudy\Server\ServerCore\obj\Release\net6.0\ServerCore.AssemblyInfo.cs
+C:\jungmin_coding\GameServerStudy\Server\ServerCore\obj\Release\net6.0\ServerCore.csproj.CoreCompileInputs.cache
+C:\jungmin_coding\GameServerStudy\Server\ServerCore\obj\Release\net6.0\ServerCore.dll
+C:\jungmin_coding\GameServerStudy\Server\ServerCore\obj\Release\net6.0\refint\ServerCore.dll
+C:\jungmin_coding\GameServerStudy\Server\ServerCore\obj\Release\net6.0\ServerCore.pdb
+C:\jungmin_coding\GameServerStudy\Server\ServerCore\obj\Release\net6.0\ServerCore.genruntimeconfig.cache
+C:\jungmin_coding\GameServerStudy\Server\ServerCore\obj\Release\net6.0\ref\ServerCore.dll
