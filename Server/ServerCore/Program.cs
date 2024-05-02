@@ -1,36 +1,81 @@
 ﻿namespace ServerCore
 {
-    // 메모리 배리어
-    // 1. 코드 재배치 억제
-    // 2. 가시성
-
     internal class Program
     {
-        int _answer;
-        bool _complete;
-
-        void A()
+        class SessionManager
         {
-            // Store가 2번이므로 Barrier를 2개 사용
-            // Barrier 1은 _answer에 대한 가시성만 보장
-            _answer = 123;
-            Thread.MemoryBarrier(); // Barrier 1
-            _complete = true;
-            Thread.MemoryBarrier(); // Barrier 2
+            static object _lock = new object();
+
+            public static void TestSession()
+            {
+                lock (_lock)
+                {
+
+                }
+            }
+
+            public static void Test()
+            {
+                lock (_lock)
+                {
+                    UserManager.TestUser();
+                }
+            }
         }
 
-        void B()
+        class UserManager
         {
-            Thread.MemoryBarrier(); // Barrier 3
-            if (_complete)
+            static object _lock = new object();
+
+            public static void Test()
             {
-                Thread.MemoryBarrier(); // Barrier 4
-                Console.WriteLine(_answer);
+                lock (_lock)
+                {
+                    SessionManager.TestSession();
+                }
+            }
+
+            public static void TestUser()
+            {
+                lock (_lock)
+                {
+
+                }
+            }
+        }
+
+        static int number = 0;
+        static object _obj = new object();
+
+        static void Thread_1()
+        {
+            for (int i = 0; i < 10000; i++)
+            {
+                SessionManager.Test();
+            }
+        }
+
+        static void Thread_2()
+        {
+            for (int i = 0; i < 10000; i++)
+            {
+                UserManager.Test();
             }
         }
 
         static void Main(string[] args)
         {
+            Task t1 = new Task(Thread_1);
+            Task t2 = new Task(Thread_2);
+            t1.Start();
+
+            //Thread.Sleep(100);
+
+            t2.Start();
+
+            Task.WaitAll(t1, t2);
+
+            Console.WriteLine(number);
         }
     }
 }
