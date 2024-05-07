@@ -1,38 +1,36 @@
-﻿namespace ServerCore
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace ServerCore
 {
-    class Program
+    internal class Program
     {
-        static volatile int count = 0;
-        static Lock _lock = new Lock();
-
-        static void Main(string[] args)
+        static ThreadLocal<string> ThreadName = new ThreadLocal<string>(() =>
         {
-            Task t1 = new Task(delegate ()
-            {
-                for (int i = 0; i < 100000; i++)
-                {
-                    _lock.ReadLock();
-                    count++;
-                    _lock.ReadUnlock();
-                }
-            });
+            return $"My Name is {Thread.CurrentThread.ManagedThreadId}";
+        });
 
-            Task t2 = new Task(delegate ()
-            {
-                for (int i = 0; i < 100000; i++)
-                {
-                    _lock.ReadLock();
-                    count--;
-                    _lock.ReadUnlock();
-                }
-            });
+        static void WhoAmI()
+        {
+            //ThreadName.Value = $"My Name is {Thread.CurrentThread.ManagedThreadId}";
 
-            t1.Start();
-            t2.Start();
+            bool repeat = ThreadName.IsValueCreated;
+            if (repeat)
+                Console.WriteLine(ThreadName.Value + "(repeat)");
+            else
+                Console.WriteLine(ThreadName.Value);
+        }
 
-            Task.WaitAll(t1, t2);
+        static void Main(string[] args) 
+        {
+            ThreadPool.SetMinThreads(1, 1);
+            ThreadPool.SetMaxThreads(3, 3);
+            Parallel.Invoke(WhoAmI, WhoAmI, WhoAmI, WhoAmI, WhoAmI);
 
-            Console.WriteLine(count);
+            ThreadName.Dispose();
         }
     }
 }
