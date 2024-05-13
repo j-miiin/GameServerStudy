@@ -1,33 +1,39 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace ServerCore
 {
-    internal class Session
+    public abstract class Session
     {
         Socket _socket;
         int _disconnected = 0;
 
         object _lock = new object();
         Queue<byte[]> _sendQueue = new Queue<byte[]>();
-        bool _pending = false;
+        List<ArraySegment<byte>> _pendingList = new List<ArraySegment<byte>>();
         SocketAsyncEventArgs _sendArgs = new SocketAsyncEventArgs();
+        SocketAsyncEventArgs _recvArgs = new SocketAsyncEventArgs();
+
+        public abstract void OnConnected(EndPoint endPoint);    // 클라가 접속했음을 알리는 시점
+        public abstract void OnRecv(ArraySegment<byte> buffer);
+        public abstract void OnSend(int numOfBytes);
+        public abstract void OnDisconnected(EndPoint endPoint);
 
         public void Start(Socket socket)
         {
             _socket = socket;
-            SocketAsyncEventArgs recvArgs = new SocketAsyncEventArgs();
-            recvArgs.Completed += new EventHandler<SocketAsyncEventArgs>(OnRecvCompleted);
+            _recvArgs.Completed += new EventHandler<SocketAsyncEventArgs>(OnRecvCompleted);
             //recvArgs.UserToken = this;    // 식별자로 구분하거나 연동하고싶은 데이터가 있을 때 사용
-            recvArgs.SetBuffer(new byte[1024], 0, 1024);
+            _recvArgs.SetBuffer(new byte[1024], 0, 1024);
 
             _sendArgs.Completed += new EventHandler<SocketAsyncEventArgs>(OnSendCompleted);
 
-            RegisterRevc(recvArgs);
+            RegisterRevc();
         }
 
         // Recv 시점은 정해져 있지만, Send 시점은 알 수 없음
@@ -41,7 +47,7 @@ namespace ServerCore
                 _sendQueue.Enqueue(sendBuff);
                 // 다른 곳에서 이미 Send 중이여서 pending이 true일 경우
                 // 큐에 Send 작업만 넣고 종료
-                if (!_pending)
+                if (_pendingList.Count == 0)
                     RegisterSend();
             }
         }
@@ -51,6 +57,7 @@ namespace ServerCore
             if (Interlocked.Exchange(ref _disconnected, 1) == 1)
                 return;
 
+            OnDisconnected(_socket.RemoteEndPoint);
             // 쫓아낸다
             _socket.Shutdown(SocketShutdown.Both); // 미리 주의를 주는 것
             _socket.Close();
@@ -60,10 +67,18 @@ namespace ServerCore
 
         void RegisterSend()
         {
-            _pending = true;
-            byte[] buff = _sendQueue.Dequeue();
-            _sendArgs.SetBuffer(buff, 0, buff.Length);
+            while (_sendQueue.Count > 0)
+            {
+                byte[] buff = _sendQueue.Dequeue();
+                // ArraySegment : 어떤 배열의 일부를 나타내는 구조체
+                _pendingList.Add(new ArraySegment<byte>(buff, 0, buff.Length));
+            }
 
+            // BufferList 안에 있는 버퍼들을 한 번에 Send
+            // BufferList에 바로 Add하면 안됨
+            // list를 따로 만들어서 Add를 한 뒤, 최종적으로 BufferList에 대입해줘야 함
+            _sendArgs.BufferList = _pendingList;
+            
             bool pending = _socket.SendAsync(_sendArgs);
             if (!pending)
                 OnSendCompleted(null, _sendArgs);
@@ -79,10 +94,13 @@ namespace ServerCore
                 {
                     try
                     {
+                        _sendArgs.BufferList = null;
+                        _pendingList.Clear();
+
+                        OnSend(_sendArgs.BytesTransferred);
+
                         if (_sendQueue.Count > 0)
                             RegisterSend();
-                        else 
-                            _pending = false;
                     }
                     catch (Exception e)
                     {
@@ -96,12 +114,12 @@ namespace ServerCore
             }
         }
 
-        void RegisterRevc(SocketAsyncEventArgs args)
+        void RegisterRevc()
         {
-            bool pending = _socket.ReceiveAsync(args);
+            bool pending = _socket.ReceiveAsync(_recvArgs);
             // 바로 성공한 경우
             if (!pending)
-                OnRecvCompleted(null, args);
+                OnRecvCompleted(null, _recvArgs);
         }
 
         void OnRecvCompleted(object sender, SocketAsyncEventArgs args)
@@ -110,9 +128,8 @@ namespace ServerCore
             {
                 try
                 {
-                    string recvData = Encoding.UTF8.GetString(args.Buffer, args.Offset, args.BytesTransferred);
-                    Console.WriteLine($"[From Client] {recvData}");
-                    RegisterRevc(args);
+                    OnRecv(new ArraySegment<byte>(args.Buffer, args.Offset, args.BytesTransferred));
+                    RegisterRevc();
                 } catch(Exception e)
                 {
                     Console.WriteLine($"OnRecvCompleted Failed {e}");
