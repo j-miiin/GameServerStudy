@@ -44,6 +44,7 @@ namespace ServerCore
         }
 
         // 낚싯대 끌어올리기
+        // 별도의 Thread에서 실행됨
         void OnAcceptCompleted(object sender, SocketAsyncEventArgs args)
         {
             if (args.SocketError == SocketError.Success)
