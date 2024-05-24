@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ServerCore
 {
@@ -13,14 +8,16 @@ namespace ServerCore
         Socket _socket;
         int _disconnected = 0;
 
+        RecvBuffer _recvBuffer = new RecvBuffer(1024);
+
         object _lock = new object();
-        Queue<byte[]> _sendQueue = new Queue<byte[]>();
+        Queue<ArraySegment<byte>> _sendQueue = new Queue<ArraySegment<byte>>();
         List<ArraySegment<byte>> _pendingList = new List<ArraySegment<byte>>();
         SocketAsyncEventArgs _sendArgs = new SocketAsyncEventArgs();
         SocketAsyncEventArgs _recvArgs = new SocketAsyncEventArgs();
 
         public abstract void OnConnected(EndPoint endPoint);    // 클라가 접속했음을 알리는 시점
-        public abstract void OnRecv(ArraySegment<byte> buffer);
+        public abstract int OnRecv(ArraySegment<byte> buffer);
         public abstract void OnSend(int numOfBytes);
         public abstract void OnDisconnected(EndPoint endPoint);
 
@@ -29,7 +26,7 @@ namespace ServerCore
             _socket = socket;
             _recvArgs.Completed += new EventHandler<SocketAsyncEventArgs>(OnRecvCompleted);
             //recvArgs.UserToken = this;    // 식별자로 구분하거나 연동하고싶은 데이터가 있을 때 사용
-            _recvArgs.SetBuffer(new byte[1024], 0, 1024);
+            //_recvArgs.SetBuffer(new byte[1024], 0, 1024);
 
             _sendArgs.Completed += new EventHandler<SocketAsyncEventArgs>(OnSendCompleted);
 
@@ -40,7 +37,7 @@ namespace ServerCore
         // SocketAsyncEvent를 재사용하면서, Send를 덩어리로 묶어서 보낼 수 있는 방법 필요
         // 재사용 -> _sendArgs를 전역에 선언하여 사용
         // 묶어서 보내기 -> 누군가 이미 Send 중인 경우 Send 요청을 Queue에 저장했다가 Completed가 되면 Queue를 비우는 작업
-        public void Send(byte[] sendBuff)
+        public void Send(ArraySegment<byte> sendBuff)
         {
             lock (_lock)
             {
@@ -69,9 +66,9 @@ namespace ServerCore
         {
             while (_sendQueue.Count > 0)
             {
-                byte[] buff = _sendQueue.Dequeue();
+                ArraySegment<byte> buff = _sendQueue.Dequeue();
                 // ArraySegment : 어떤 배열의 일부를 나타내는 구조체
-                _pendingList.Add(new ArraySegment<byte>(buff, 0, buff.Length));
+                _pendingList.Add(buff);
             }
 
             // BufferList 안에 있는 버퍼들을 한 번에 Send
@@ -116,6 +113,10 @@ namespace ServerCore
 
         void RegisterRevc()
         {
+            _recvBuffer.Clean();
+            ArraySegment<byte> segment = _recvBuffer.WriteSegment;
+            _recvArgs.SetBuffer(segment.Array, segment.Offset, segment.Count);
+
             bool pending = _socket.ReceiveAsync(_recvArgs);
             // 바로 성공한 경우
             if (!pending)
@@ -128,7 +129,29 @@ namespace ServerCore
             {
                 try
                 {
-                    OnRecv(new ArraySegment<byte>(args.Buffer, args.Offset, args.BytesTransferred));
+                    // Write 커서 이동
+                    if (!_recvBuffer.OnWrite(args.BytesTransferred))
+                    {
+                        Disconnect();
+                        return;
+                    }
+
+                    // 컨텐츠 쪽으로 데이터를 넘겨주고 얼마나 처리했는지 받음
+                    //OnRecv(new ArraySegment<byte>(args.Buffer, args.Offset, args.BytesTransferred));
+                    int processLen = OnRecv(_recvBuffer.ReadSegment);
+                    if (processLen < 0 || _recvBuffer.DataSize < processLen)
+                    {
+                        Disconnect();
+                        return;
+                    }
+
+                    // Read 커서 이동
+                    if (!_recvBuffer.OnRead(processLen))
+                    {
+                        Disconnect();
+                        return;
+                    }
+
                     RegisterRevc();
                 } catch(Exception e)
                 {
