@@ -13,3 +13,8 @@ C:\jungmin_coding\GameServerStudy\Server\PacketGenerator\obj\Debug\net6.0\refint
 C:\jungmin_coding\GameServerStudy\Server\PacketGenerator\obj\Debug\net6.0\PacketGenerator.pdb
 C:\jungmin_coding\GameServerStudy\Server\PacketGenerator\obj\Debug\net6.0\PacketGenerator.genruntimeconfig.cache
 C:\jungmin_coding\GameServerStudy\Server\PacketGenerator\obj\Debug\net6.0\ref\PacketGenerator.dll
+C:\jungmin_coding\GameServerStudy\Server\PacketGenerator\bin\net6.0\PacketGenerator.exe
+C:\jungmin_coding\GameServerStudy\Server\PacketGenerator\bin\net6.0\PacketGenerator.deps.json
+C:\jungmin_coding\GameServerStudy\Server\PacketGenerator\bin\net6.0\PacketGenerator.runtimeconfig.json
+C:\jungmin_coding\GameServerStudy\Server\PacketGenerator\bin\net6.0\PacketGenerator.dll
+C:\jungmin_coding\GameServerStudy\Server\PacketGenerator\bin\net6.0\PacketGenerator.pdb
