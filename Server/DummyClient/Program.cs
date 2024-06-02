@@ -1,7 +1,5 @@
 ﻿using ServerCore;
 using System.Net;
-using System.Net.Sockets;
-using System.Text;
 
 namespace DummyClient
 {
@@ -16,19 +14,22 @@ namespace DummyClient
             IPEndPoint endPoint = new IPEndPoint(ipAddr, 7777);
 
             Connector connector = new Connector();
-            connector.Connect(endPoint, () => { return new ServerSession(); });
+            connector.Connect(endPoint, () => { return SessionManager.Instance.Generate(); },
+                100);
 
             while (true)
             {
                 try
                 {
+                    SessionManager.Instance.SendForEach();
                 }
                 catch (Exception e)
                 {
                     Console.WriteLine(e.ToString());
                 }
 
-                Thread.Sleep(100);
+                // 250인 이유 : 일반적으로 MMO 서버에서 이동 패킷을 보낼 때 1초에 4번 정도 보냄
+                Thread.Sleep(250);
             }
         }
     }

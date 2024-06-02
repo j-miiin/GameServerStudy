@@ -53,6 +53,15 @@ namespace ServerCore
         public abstract void OnSend(int numOfBytes);
         public abstract void OnDisconnected(EndPoint endPoint);
 
+        void Clear()
+        {
+            lock (_lock)
+            {
+                _sendQueue.Clear();
+                _pendingList.Clear();
+            }
+        }
+
         public void Start(Socket socket)
         {
             _socket = socket;
@@ -62,7 +71,7 @@ namespace ServerCore
 
             _sendArgs.Completed += new EventHandler<SocketAsyncEventArgs>(OnSendCompleted);
 
-            RegisterRevc();
+            RegisterRecv();
         }
 
         // Recv 시점은 정해져 있지만, Send 시점은 알 수 없음
@@ -90,12 +99,15 @@ namespace ServerCore
             // 쫓아낸다
             _socket.Shutdown(SocketShutdown.Both); // 미리 주의를 주는 것
             _socket.Close();
+            Clear();
         }
 
         #region 네트워크 통신
 
         void RegisterSend()
         {
+            if (_disconnected == 1) return;
+
             while (_sendQueue.Count > 0)
             {
                 ArraySegment<byte> buff = _sendQueue.Dequeue();
@@ -108,9 +120,16 @@ namespace ServerCore
             // list를 따로 만들어서 Add를 한 뒤, 최종적으로 BufferList에 대입해줘야 함
             _sendArgs.BufferList = _pendingList;
             
-            bool pending = _socket.SendAsync(_sendArgs);
-            if (!pending)
-                OnSendCompleted(null, _sendArgs);
+            try
+            {
+                bool pending = _socket.SendAsync(_sendArgs);
+                if (!pending)
+                    OnSendCompleted(null, _sendArgs);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"RegisterSend Failed {e}");
+            }
         }
 
         // _sendArgs.Completed에 콜백으로 연결되어 다른 Thread에서 실행될 수 있으므로
@@ -143,16 +162,25 @@ namespace ServerCore
             }
         }
 
-        void RegisterRevc()
+        void RegisterRecv()
         {
+            if (_disconnected == 1) return;
+
             _recvBuffer.Clean();
             ArraySegment<byte> segment = _recvBuffer.WriteSegment;
             _recvArgs.SetBuffer(segment.Array, segment.Offset, segment.Count);
 
-            bool pending = _socket.ReceiveAsync(_recvArgs);
-            // 바로 성공한 경우
-            if (!pending)
-                OnRecvCompleted(null, _recvArgs);
+            try
+            {
+                bool pending = _socket.ReceiveAsync(_recvArgs);
+                // 바로 성공한 경우
+                if (!pending)
+                    OnRecvCompleted(null, _recvArgs);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"RegisterRecv Failed {e}");
+            }
         }
 
         void OnRecvCompleted(object sender, SocketAsyncEventArgs args)
@@ -184,7 +212,7 @@ namespace ServerCore
                         return;
                     }
 
-                    RegisterRevc();
+                    RegisterRecv();
                 } catch(Exception e)
                 {
                     Console.WriteLine($"OnRecvCompleted Failed {e}");
