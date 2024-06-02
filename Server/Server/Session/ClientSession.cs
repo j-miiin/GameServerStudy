@@ -12,7 +12,7 @@ namespace Server
         {
             Console.WriteLine($"OnConnected : {endPoint}");
 
-            Program.Room.Enter(this);
+            Program.Room.Push(() => Program.Room.Enter(this));
         }
 
         public override void OnRecvPacket(ArraySegment<byte> buffer)
@@ -20,19 +20,13 @@ namespace Server
             PacketManager.Instance.OnRecvPacket(this, buffer);
         }
 
-        //public override int OnRecv(ArraySegment<byte> buffer)
-        //{
-        //    string recvData = Encoding.UTF8.GetString(buffer.Array, buffer.Offset, buffer.Count);
-        //    Console.WriteLine($"[From Client] {recvData}");
-        //    return buffer.Count;
-        //}
-
         public override void OnDisconnected(EndPoint endPoint)
         {
             SessionManager.Instance.Remove(this);
             if (Room != null)
             {
-                Room.Exit(this);
+                GameRoom room = Room;
+                room.Push(() => room.Exit(this));
                 Room = null;
             }
             Console.WriteLine($"OnDisconnected : {endPoint}");
