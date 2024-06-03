@@ -6,10 +6,20 @@ namespace Server
     {
         List<ClientSession> _sessions = new List<ClientSession>();
         JobQueue _jobQueue = new JobQueue();
+        List<ArraySegment<byte>> _pendingList = new List<ArraySegment<byte>>();
 
         public void Push(Action job)
         {
             _jobQueue.Push(job);
+        }
+
+        public void Flush()
+        {
+            foreach (ClientSession s in _sessions)
+                s.Send(_pendingList);
+
+            Console.WriteLine($"Flushed {_pendingList.Count} items");
+            _pendingList.Clear();
         }
 
         public void Broadcast(ClientSession session, string chat)
@@ -26,8 +36,9 @@ namespace Server
 
             // n명의 유저들에게 n번 패킷을 보내므로 시간 복잡도가 O(N^2)이 됨
             // 패킷을 모아보내서 부하를 완화할 수 있음
-            foreach (ClientSession s in _sessions)
-                s.Send(segment);
+            _pendingList.Add(segment);
+            //  foreach (ClientSession s in _sessions)
+            //      s.Send(segment);
             //}
         }
 
