@@ -9,7 +9,14 @@ internal class PacketHandler
         S_Chat chatPacket = packet as S_Chat;
         ServerSession serverSession = session as ServerSession;
 
-        if (chatPacket.playerId == 1) Debug.Log(chatPacket.chat);
+        //if (chatPacket.playerId == 1)
+        {
+            Debug.Log(chatPacket.chat);
+
+            GameObject go = GameObject.Find("Player");
+            if (go == null) Debug.Log("Player not found");
+            else Debug.Log("Player found");
+        }
         //if (chatPacket.playerId == 1)
             //Console.WriteLine(chatPacket.chat);
     }
