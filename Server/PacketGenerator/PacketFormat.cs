@@ -14,7 +14,7 @@ namespace PacketGenerator
 using System.Collections.Generic;
 using ServerCore;
 
-class PacketManager
+public class PacketManager
 {{
     #region Singleton
     static PacketManager _instance = new PacketManager();
@@ -105,7 +105,7 @@ public interface IPacket
         // {2} 멤버 변수 Read
         // {3} 멤버 변수 Write
         public static string packetFormat =
-@"class {0} : IPacket
+@"public class {0} : IPacket
 {{
     {1}
 
@@ -202,7 +202,7 @@ for (int i = 0; i < {1}Len; i++)
 {{
     {0} {1} = new {0}();
     {1}.Read(s, ref count);
-    {1}s.Add(skill);
+    {1}s.Add({1});
 }}
 ";
 
@@ -233,7 +233,7 @@ count += {0}Len;
         public static string writeListFormat =
 @"success &= BitConverter.TryWriteBytes(s.Slice(count, s.Length - count), (ushort)this.{1}s.Count);
 count += sizeof(ushort);
-foreach ({0} skill in this.{1}s)
+foreach ({0} {1} in this.{1}s)
     success &= {1}.Write(s, ref count);
 ";
     }
